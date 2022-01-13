@@ -27,8 +27,11 @@ my_price = core.get_price()
 
 #pp.pprint(core.get_order_status())
 
-my_pos = core.get_my_position()
+core.get_my_position()
 
+pp.pprint(core.my_pos)
+
+print((core.my_pos[1]['value'] + core.my_pos[2]['value']) / (core.my_pos[0]['value'] * margin) * 100)
 
 order = [[], []]
 total_size = 2

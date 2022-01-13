@@ -9,6 +9,12 @@ coin = ''
 margin = 0.0
 cur_price = 0.0
 
+# v['position_value'], v['entry_price'], v['side'], v['size']
+pos = {'side' : 'Wallet', 'size' : 0, 'value' : 0.0, 'price' : 0.0}
+my_pos = [pos, pos.copy(), pos.copy()]
+my_pos[1]['side'] = 'Buy'
+my_pos[2]['side'] = 'Sell'
+
 def init(_test, _symbol, _margin, access_type='1'):
     global session, margin 
     margin = _margin
@@ -49,14 +55,19 @@ def get_symbol_data(_symbol):
             return sb
 
 def get_balance():
-    global session, symbol, coin
+    global session, symbol, coin, my_pos
     result = session.get_wallet_balance(symbol=symbol)
     #pp.pprint(result['result'][coin])
+    my_pos[0]['price'] = get_price()
+    my_pos[0]['value'] = float(result['result'][coin]['wallet_balance'])
+    my_pos[0]['size'] = float(result['result'][coin]['available_balance'])
+    
     return float(result['result'][coin]['available_balance'])
 
 def get_price():
     global session, symbol
     result = session.latest_information_for_symbol(symbol=symbol)
+    print("get_price")
     return float(result['result'][0]['last_price'])
 
 def get_total_qty():
@@ -82,16 +93,28 @@ def get_order_status(_order_id=''):
         return ''
 
 def get_my_position():
-    global session, symbol
+    global session, symbol, my_pos
     result = session.my_position(symbol=symbol)['result']
 
-    pos = [[],[]]
+    pos = []
+    get_balance()
 
     for r in result:
         v = r['data']
+        cnt = 0
+        if v['side']  == 'Buy':
+            cnt = 1
+        elif v['side'] == 'Sell':
+            cnt = 2
+        
+        if cnt:
+            my_pos[cnt]['size'] = float(v['size'])
+            my_pos[cnt]['value'] = float(v['position_value'])
+            my_pos[cnt]['price'] = float(v['entry_price'])
+        pos.append(v)
         print("result = ", v['position_value'], v['entry_price'], v['side'], v['size'])
 
-    return result
+    return pos
 
 def create_order(_side, _qty, _price, _close):
     global session, symbol
