@@ -67,7 +67,7 @@ def get_balance():
 def get_price():
     global session, symbol
     result = session.latest_information_for_symbol(symbol=symbol)
-    print("get_price")
+
     return float(result['result'][0]['last_price'])
 
 def get_total_qty():

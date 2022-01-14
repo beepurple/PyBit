@@ -13,28 +13,29 @@ class Order:
         self.order_id = ''
         self.time = 0.0
         self.step = 0
+
+        self.win = 0
+        self.lose = 0
     
     def set_side(self):
         return 'Buy' if self.side else 'Sell'
     
-    def set_order(self, _qty, _price, _status):
+    def set_order(self, _qty, _price, _status, _filled=False):
+        if _filled:
+            self.side = not self.side
+            self.close = not self.close
+
         if self.close:
             self.close_price = float(_price)
         else:
             self.open_price = float(_price)
         
         self.order_status = _status
-        if self.order_status == 'New':
-            self.step = 2
         
         self.qty = float(_qty)        
         self.time = float(time.time())
     
-    def create_order(self, _qty, _price):
-        side = self.set_side()
-        self.order_id = core.create_order(side, _qty, _price, self.close)
-    
-    def get_order_status(self):
+    def get_order_status(self, checkNew=True):
         result = []
         done = False
         status = ''
@@ -52,10 +53,16 @@ class Order:
                 time.sleep(1)
                 
         self.order_status = status
-        if status == 'New':
+        if status == 'New' and checkNew:
             self.set_order(result['qty'], result['price'], status)
             print(self.name, self.side, self.close, result['qty'], result['price'], "주문이 정상 진입하였습니다.",
                   core.get_cur_time(), "현재 Step:", self.step)
+            
+            if self.step == 1:
+                self.step = 2
+            elif self.step == 3:
+                self.step = 4
+
         elif status == 'Filled':
             print(self.name, result['side'], self.close, result['qty'], result['price'], "거래가 체결 되었습니다.", "현재 Step:", self.step)
             if self.close:
@@ -68,34 +75,45 @@ class Order:
 
                 print(self.name, "win :", self.win, "lose :", self.lose, "이득 금액", rst, self.total_profit, "현재 Step:", self.step)
             
-            self.side = not self.side
-            self.close = not self.close
+            if self.step == 2:
+                self.step = 3
+            elif self.step == 4:
+                self.step = 5
 
-        elif status == 'Created':
-            done = False
+            self.set_order(result['qty'], result['price'], status, True)
+
         elif status == 'Cancelled':
             if self.step == 2:
                 self.step = 1
             elif self.step == 4:
                 self.step = 3
             print(self.name, self.side, self.close, "Cancelled!!", "현재 Step:", self.step)
-            
-        elif status == 'PendingCancel' or status == 'Rejected':
+            done = False
+        # elif status == 'Created':
+        #     done = False
+        # elif status == 'PendingCancel' or status == 'Rejected':
+        #     done = False
+        else:
             done = False
 
         return done, status
     
-    def open_order(self, _price, _qty=''):
+    def create_order(self, _price='', _qty=''):
         done = False
         status = ''
-        my_pos = -1 if self.side else 1
+
+        if _price == '':
+            _price = self.open_price
+            if self.close:
+                _price += 100 * (-1 if self.side else 1)
 
         if _qty == '':
             _qty = self.qty
 
         while not done:
             if status != 'Created':
-                self.create_order(_qty, _price)
+                side = self.set_side()
+                self.order_id = core.create_order(side, _qty, _price, self.close)
             done, status = self.get_order_status()
 
     def cancel_order(self):
@@ -105,7 +123,5 @@ class Order:
     
     def change_order_price(self, r_price):
         self.cancel_order()
-        if self.close:
-            self.close_order(r_price)
-        else:
-            self.open_order(r_price)
+        self.create_order(r_price)
+
