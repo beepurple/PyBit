@@ -27,11 +27,14 @@ my_price = core.get_price()
 
 #pp.pprint(core.get_order_status())
 
-core.get_my_position()
+# core.get_my_position()
+# pp.pprint(core.my_pos)
+# print(core.my_pos[1]['unrealised_pnl'], core.my_pos[2]['unrealised_pnl'])
 
-pp.pprint(core.my_pos)
-
-print((core.my_pos[1]['value'] + core.my_pos[2]['value']) / (core.my_pos[0]['value'] * margin) * 100)
+print("pnl0 = ", core.get_pnl())
+print("pnl1 = ", core.get_pnl(1))
+print("pnl2 = ", core.get_pnl(2))
+#print((core.my_pos[1]['position_value'] + core.my_pos[2]['position_value']) / (core.my_pos[0]['position_value'] * margin) * 100)
 
 order = [[], []]
 total_size = 5
@@ -43,7 +46,7 @@ for i in range(total_size):
     order[1].append(o)
 
 
-done = True
+done = False
 while done:
     time.sleep(2)
     core.cur_price = core.get_price()
@@ -67,7 +70,7 @@ while done:
                 if Filled:
                     print("변경 합니다.")    
                     for ro in order[1-i]:
-                        if ro.step == 1:
+                        if ro.step == 2:
                             ro.change_order_price(ro.open_price - tick_size *(-1 if ro.side else 1))
 
             elif o.step == 3:

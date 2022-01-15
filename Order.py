@@ -16,6 +16,7 @@ class Order:
 
         self.win = 0
         self.lose = 0
+        self.total_profit = 0.0
     
     def set_side(self):
         return 'Buy' if self.side else 'Sell'

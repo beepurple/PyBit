@@ -9,11 +9,7 @@ coin = ''
 margin = 0.0
 cur_price = 0.0
 
-# v['position_value'], v['entry_price'], v['side'], v['size']
-pos = {'side' : 'Wallet', 'size' : 0, 'value' : 0.0, 'price' : 0.0}
-my_pos = [pos, pos.copy(), pos.copy()]
-my_pos[1]['side'] = 'Buy'
-my_pos[2]['side'] = 'Sell'
+my_pos = [[], [], []]
 
 def init(_test, _symbol, _margin, access_type='1'):
     global session, margin 
@@ -57,10 +53,8 @@ def get_symbol_data(_symbol):
 def get_balance():
     global session, symbol, coin, my_pos
     result = session.get_wallet_balance(symbol=symbol)
-    #pp.pprint(result['result'][coin])
-    my_pos[0]['price'] = get_price()
-    my_pos[0]['value'] = float(result['result'][coin]['wallet_balance'])
-    my_pos[0]['size'] = float(result['result'][coin]['available_balance'])
+
+    my_pos[0] = result['result'][coin]
     
     return float(result['result'][coin]['available_balance'])
 
@@ -96,25 +90,21 @@ def get_my_position():
     global session, symbol, my_pos
     result = session.my_position(symbol=symbol)['result']
 
-    pos = []
     get_balance()
 
     for r in result:
         v = r['data']
         cnt = 0
-        if v['side']  == 'Buy':
+        if v['side'] == 'Buy':
             cnt = 1
         elif v['side'] == 'Sell':
             cnt = 2
-        
-        if cnt:
-            my_pos[cnt]['size'] = float(v['size'])
-            my_pos[cnt]['value'] = float(v['position_value'])
-            my_pos[cnt]['price'] = float(v['entry_price'])
-        pos.append(v)
-        print("result = ", v['position_value'], v['entry_price'], v['side'], v['size'])
 
-    return pos
+        if cnt:
+            my_pos[cnt] = v
+        #print("result = ", v['position_value'], v['entry_price'], v['side'], v['size'])
+
+    return my_pos
 
 def create_order(_side, _qty, _price, _close):
     global session, symbol
@@ -153,3 +143,21 @@ def cancel_order(_order_id):
     global session, symbol
     return session.cancel_active_order(symbol=symbol, order_id=_order_id)
 
+def get_pnl(cnt=0):
+    global my_pos
+    get_my_position()
+    pnl = 0.0
+    cur_price = get_price()
+    entry_price = 0.0
+    if cnt:
+        entry_price = float(my_pos[cnt]['entry_price'])
+        pnl = (cur_price / entry_price * 100) - 100
+    else:
+        v1 = float(my_pos[1]['position_value'])
+        v2 = float(my_pos[2]['position_value'])
+        pnl1 = ((cur_price / float(my_pos[1]['entry_price']) * 100) - 100) * v1
+        pnl2 = ((cur_price / float(my_pos[2]['entry_price']) * 100) - 100) * v2
+        print(v1, v2, pnl1, pnl2)
+        pnl = (pnl1 + pnl2) / (v1 + v2)
+    
+    return pnl
