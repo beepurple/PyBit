@@ -143,21 +143,37 @@ def cancel_order(_order_id):
     global session, symbol
     return session.cancel_active_order(symbol=symbol, order_id=_order_id)
 
-def get_pnl(cnt=0):
-    global my_pos
+def get_pnl_vratio():
+    global my_pos, cur_price
     get_my_position()
-    pnl = 0.0
+
+    pnl = []
+    vratio = []
+
     cur_price = get_price()
     entry_price = 0.0
-    if cnt:
-        entry_price = float(my_pos[cnt]['entry_price'])
-        pnl = (cur_price / entry_price * 100) - 100
-    else:
-        v1 = float(my_pos[1]['position_value'])
-        v2 = float(my_pos[2]['position_value'])
-        pnl1 = ((cur_price / float(my_pos[1]['entry_price']) * 100) - 100) * v1
-        pnl2 = ((cur_price / float(my_pos[2]['entry_price']) * 100) - 100) * v2
-        print(v1, v2, pnl1, pnl2)
-        pnl = (pnl1 + pnl2) / (v1 + v2)
+    total_balance = my_pos[0]['wallet_balance'] * margin
+      
+    v1 = float(my_pos[1]['position_value'])    
+    v2 = float(my_pos[2]['position_value'])
+
+    volumn = v1 / total_balance * 100
+    vratio.append(volumn)
+    volumn = v2 / total_balance * 100
+    vratio.append(volumn)
+    volumn = (v1 + v2) / total_balance * 100
+    vratio.append(volumn)
+
+    entry_price = float(my_pos[1]['entry_price'])
+    pnl1 = ((cur_price / entry_price * 100) - 100) * margin
+    entry_price = float(my_pos[2]['entry_price'])
+    pnl2 = ((cur_price / entry_price * 100) - 100) * -margin
     
-    return pnl
+    # print(v1, v2, pnl1, pnl2, total_balance, v1/total_balance * 100, v2/total_balance * 100)
+    pnl3 = (pnl1 * v1 + pnl2 * v2) / (v1 + v2)
+    
+    pnl.append(pnl1)
+    pnl.append(pnl2)
+    pnl.append(pnl3)
+    
+    return pnl, vratio

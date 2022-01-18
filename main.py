@@ -31,9 +31,6 @@ my_price = core.get_price()
 # pp.pprint(core.my_pos)
 # print(core.my_pos[1]['unrealised_pnl'], core.my_pos[2]['unrealised_pnl'])
 
-print("pnl0 = ", core.get_pnl())
-print("pnl1 = ", core.get_pnl(1))
-print("pnl2 = ", core.get_pnl(2))
 #print((core.my_pos[1]['position_value'] + core.my_pos[2]['position_value']) / (core.my_pos[0]['position_value'] * margin) * 100)
 
 order = [[], []]
@@ -46,38 +43,56 @@ for i in range(total_size):
     order[1].append(o)
 
 
-done = False
+done = True
 while done:
     time.sleep(2)
-    core.cur_price = core.get_price()
+    pnl, vratio = core.get_pnl_vratio()
+    
     for i in range(2):
         price = core.cur_price
         tick = tick_size
         for o in order[i]:
             if o.step == 0:
-                
-                o.open_price = price + (tick * (-1 if o.side else 1))
-                tick += tick_size
-                o.qty = 1
-                o.step = 1
-                
+                if vratio[i] == 0:
+                    o.open_price = price + (tick * (-1 if o.side else 1))
+                    tick += tick_size
+                    o.qty = 1
+                    o.step = 1
+                elif vratio[i] < 25:     
+                    open_price = round(float(core.my_pos[i+1]['entry_price'])) + (tick * (-1 if o.side else 1))      
+                    if open_price < price:
+                        if not o.side:
+                            open_price = price + tick
+                    elif price < open_price:
+                        if o.side:
+                            open_price = price - tick
+                    o.open_price = open_price
+                    tick += tick_size
+                    o.qty = 1
+                    o.step = 1
+                else:
+                    o.side = not o.side
+                    o.close = not o.close
+                    open_price = round(float(core.my_pos[i+1]['entry_price'])) + (tick * (-1 if not o.side else 1))
+                    o.open_price = open_price
+                    tick += tick_size
+                    o.qty = 1
+                    o.step = 3
+                    
             elif o.step == 1:
                 o.create_order()
 
             elif o.step == 2:
                 Filled, _ = o.get_order_status(False)
                 
-                if Filled:
-                    print("변경 합니다.")    
-                    for ro in order[1-i]:
-                        if ro.step == 2:
-                            ro.change_order_price(ro.open_price - tick_size *(-1 if ro.side else 1))
+                # if Filled:
+                #     print("변경 합니다.")    
+                #     for ro in order[1-i]:
+                #         if ro.step == 2:
+                #             ro.change_order_price(ro.open_price - tick_size *(-1 if ro.side else 1))
 
             elif o.step == 3:
                 o.create_order()
             elif o.step == 4:
                 o.get_order_status(False)
-            elif o.step == 5:
-                done = False
-
                 

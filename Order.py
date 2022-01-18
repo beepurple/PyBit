@@ -79,7 +79,7 @@ class Order:
             if self.step == 2:
                 self.step = 3
             elif self.step == 4:
-                self.step = 5
+                self.step = 0
 
             self.set_order(result['qty'], result['price'], status, True)
 
@@ -99,14 +99,14 @@ class Order:
 
         return done, status
     
-    def create_order(self, _price='', _qty=''):
+    def create_order(self, _price='', _qty='', _tick=100):
         done = False
         status = ''
 
         if _price == '':
             _price = self.open_price
             if self.close:
-                _price += 100 * (-1 if self.side else 1)
+                _price += _tick * (-1 if self.side else 1)
 
         if _qty == '':
             _qty = self.qty
