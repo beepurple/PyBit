@@ -1,7 +1,10 @@
+from json.encoder import INFINITY
 import core
 import time
 import pprint as pp
 class Order:
+    last_price = [INFINITY, 0.0]
+    
     def __init__(self, _name, _side):
         self.name = _name
         self.side = _side
@@ -30,6 +33,12 @@ class Order:
             self.close_price = float(_price)
         else:
             self.open_price = float(_price)
+            if self.side:
+                if self.open_price < Order.last_price[0]:
+                    Order.last_price[0] = self.open_price
+            else:
+                if Order.last_price[1] < self.open_price:
+                    Order.last_price[1] = self.open_price
         
         self.order_status = _status
         
@@ -103,10 +112,11 @@ class Order:
         done = False
         status = ''
 
+        my_side = -1 if self.side else 1
         if _price == '':
             _price = self.open_price
             if self.close:
-                _price += _tick * (-1 if self.side else 1)
+                _price += _tick * my_side
 
         if _qty == '':
             _qty = self.qty
@@ -116,6 +126,20 @@ class Order:
                 side = self.set_side()
                 self.order_id = core.create_order(side, _qty, _price, self.close)
             done, status = self.get_order_status()
+
+            check = False
+            if self.close:
+                if self.side:
+                    if core.cur_price < _price:
+                        check = True
+                else:
+                    if _price < core.cur_price:
+                        check = True 
+
+                if check:
+                    _price = core.cur_price + (_tick * my_side)   
+                else:
+                    _price += (_tick * my_side) 
 
     def cancel_order(self):
         result = core.cancel_order(self.order_id)

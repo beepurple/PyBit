@@ -88,6 +88,8 @@ def get_order_status(_order_id=''):
 
 def get_my_position():
     global session, symbol, my_pos
+
+    # 오류 수정 필요
     result = session.my_position(symbol=symbol)['result']
 
     get_balance()

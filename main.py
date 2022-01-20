@@ -1,3 +1,4 @@
+from json.encoder import INFINITY
 import core 
 import time
 from Order import Order
@@ -32,10 +33,10 @@ my_price = core.get_price()
 # print(core.my_pos[1]['unrealised_pnl'], core.my_pos[2]['unrealised_pnl'])
 
 #print((core.my_pos[1]['position_value'] + core.my_pos[2]['position_value']) / (core.my_pos[0]['position_value'] * margin) * 100)
-
+pp.pprint(core.get_pnl_vratio())
 order = [[], []]
 total_size = 5
-tick_size = 50
+tick_size = 100
 for i in range(total_size):
     o = Order(str(i) + 'B', True)
     order[0].append(o)
@@ -43,6 +44,7 @@ for i in range(total_size):
     order[1].append(o)
 
 
+#done = False
 done = True
 while done:
     time.sleep(2)
@@ -50,33 +52,43 @@ while done:
     
     for i in range(2):
         price = core.cur_price
-        tick = tick_size
+        tick = 0
         for o in order[i]:
             if o.step == 0:
+                o.qty = 1
+                o.step = 1
+                tick += (tick_size * (-1 if o.side else 1))
+                tick_price = price + tick
+
                 if vratio[i] == 0:
-                    o.open_price = price + (tick * (-1 if o.side else 1))
-                    tick += tick_size
-                    o.qty = 1
-                    o.step = 1
-                elif vratio[i] < 25:     
-                    open_price = round(float(core.my_pos[i+1]['entry_price'])) + (tick * (-1 if o.side else 1))      
-                    if open_price < price:
+                    o.open_price = price
+                                        
+                elif vratio[i] < 25:                        
+                    open_price = round(float(core.my_pos[i+1]['entry_price'])) + tick
+                    #print(open_price, price, Order.last_price[i])
+
+                    if open_price < tick_price:
                         if not o.side:
-                            open_price = price + tick
-                    elif price < open_price:
+                            open_price = tick_price
+                    elif tick_price < open_price:
                         if o.side:
-                            open_price = price - tick
+                            open_price = tick_price
+                    
+                    if pnl[i] < 0:
+                        if o.side:
+                            if Order.last_price[i] - tick_size < open_price:
+                                open_price = Order.last_price[i] - tick_size
+                        else:
+                            if open_price < Order.last_price[i] + tick:
+                                open_price = Order.last_price[i] + tick
+                    
                     o.open_price = open_price
-                    tick += tick_size
-                    o.qty = 1
-                    o.step = 1
+                
                 else:
                     o.side = not o.side
                     o.close = not o.close
                     open_price = round(float(core.my_pos[i+1]['entry_price'])) + (tick * (-1 if not o.side else 1))
                     o.open_price = open_price
-                    tick += tick_size
-                    o.qty = 1
                     o.step = 3
                     
             elif o.step == 1:
