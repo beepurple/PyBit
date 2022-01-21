@@ -1,10 +1,11 @@
-from json.encoder import INFINITY
-import core
+
 import time
 import pprint as pp
 class Order:
-    last_price = [INFINITY, 0.0]
-    
+    open_last_price = [float('inf'), 0.0]
+    close_last_price = [0.0, float('inf')]
+    core = ''
+
     def __init__(self, _name, _side):
         self.name = _name
         self.side = _side
@@ -31,14 +32,20 @@ class Order:
 
         if self.close:
             self.close_price = float(_price)
+            if self.side:
+                if self.close_price < Order.close_last_price[1]:
+                    Order.close_last_price[1] = self.close_price
+            else:
+                if Order.close_last_price[0] < self.close_price:
+                    Order.close_last_price[0] = self.close_price
         else:
             self.open_price = float(_price)
             if self.side:
-                if self.open_price < Order.last_price[0]:
-                    Order.last_price[0] = self.open_price
+                if self.open_price < Order.open_last_price[0]:
+                    Order.open_last_price[0] = self.open_price
             else:
-                if Order.last_price[1] < self.open_price:
-                    Order.last_price[1] = self.open_price
+                if Order.open_last_price[1] < self.open_price:
+                    Order.open_last_price[1] = self.open_price
         
         self.order_status = _status
         
@@ -54,7 +61,7 @@ class Order:
         
         while not done:
             try:
-                result = core.get_order_status(self.order_id)
+                result = Order.core.get_order_status(self.order_id)
                 status = result['order_status']                
                 done = True
                 
@@ -66,7 +73,7 @@ class Order:
         if status == 'New' and checkNew:
             self.set_order(result['qty'], result['price'], status)
             print(self.name, self.side, self.close, result['qty'], result['price'], "주문이 정상 진입하였습니다.",
-                  core.get_cur_time(), "현재 Step:", self.step)
+                  Order.core.get_cur_time(), "현재 Step:", self.step)
             
             if self.step == 1:
                 self.step = 2
@@ -81,7 +88,7 @@ class Order:
                     self.win += 1
                 else:
                     self.lose += 1
-                self.total_profit += (rst / core.cur_price)
+                self.total_profit += (rst / Order.core.cur_price)
 
                 print(self.name, "win :", self.win, "lose :", self.lose, "이득 금액", rst, self.total_profit, "현재 Step:", self.step)
             
@@ -124,25 +131,25 @@ class Order:
         while not done:
             if status != 'Created':
                 side = self.set_side()
-                self.order_id = core.create_order(side, _qty, _price, self.close)
+                self.order_id = Order.core.create_order(side, _qty, _price, self.close)
             done, status = self.get_order_status()
 
             check = False
             if self.close:
                 if self.side:
-                    if core.cur_price < _price:
+                    if Order.core.cur_price < _price:
                         check = True
                 else:
-                    if _price < core.cur_price:
+                    if _price < Order.core.cur_price:
                         check = True 
 
                 if check:
-                    _price = core.cur_price + (_tick * my_side)   
+                    _price = Order.core.cur_price + (_tick * my_side)   
                 else:
                     _price += (_tick * my_side) 
 
     def cancel_order(self):
-        result = core.cancel_order(self.order_id)
+        result = Order.core.cancel_order(self.order_id)
         time.sleep(0.01)
         return result 
     

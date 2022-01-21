@@ -1,5 +1,5 @@
 from json.encoder import INFINITY
-import core 
+from Core import Core
 import time
 from Order import Order
 import pprint as pp
@@ -7,7 +7,7 @@ import pprint as pp
 margin = 10
 testnet = False
 symbol = 'BTCUSD0624'
-core.init(testnet, symbol, margin)
+core = Core(testnet, symbol, margin)
 
 balance = core.get_balance()
 my_price = core.get_price()
@@ -33,19 +33,30 @@ my_price = core.get_price()
 # print(core.my_pos[1]['unrealised_pnl'], core.my_pos[2]['unrealised_pnl'])
 
 #print((core.my_pos[1]['position_value'] + core.my_pos[2]['position_value']) / (core.my_pos[0]['position_value'] * margin) * 100)
-pp.pprint(core.get_pnl_vratio())
+
+tot_val = core.get_total_qty() * margin
+#pp.pprint(core.get_pnl_vratio())
 order = [[], []]
-total_size = 5
-tick_size = 100
+
+total_size = 10
+qty_size = 1
+# if tot_val > total_size:
+#     qty_size = tot_val // total_size
+
+tick_size = 50
 for i in range(total_size):
     o = Order(str(i) + 'B', True)
     order[0].append(o)
     o = Order(str(i) + 'S', False)
     order[1].append(o)
 
+Order.core = core
 
-#done = False
+done = False
 done = True
+basis_per = 15
+full_per = 25
+
 while done:
     time.sleep(2)
     pnl, vratio = core.get_pnl_vratio()
@@ -55,17 +66,17 @@ while done:
         tick = 0
         for o in order[i]:
             if o.step == 0:
-                o.qty = 1
+                o.qty = qty_size
                 o.step = 1
                 tick += (tick_size * (-1 if o.side else 1))
                 tick_price = price + tick
 
-                if vratio[i] == 0:
-                    o.open_price = price
+                if vratio[i] < basis_per:
+                    o.open_price = tick_price
                                         
-                elif vratio[i] < 25:                        
+                elif vratio[i] < full_per:                         
                     open_price = round(float(core.my_pos[i+1]['entry_price'])) + tick
-                    #print(open_price, price, Order.last_price[i])
+                    #print(open_price, price, Order.open_last_price[i])
 
                     if open_price < tick_price:
                         if not o.side:
@@ -76,11 +87,11 @@ while done:
                     
                     if pnl[i] < 0:
                         if o.side:
-                            if Order.last_price[i] - tick_size < open_price:
-                                open_price = Order.last_price[i] - tick_size
+                            if Order.open_last_price[i] - tick_size < open_price:
+                                open_price = Order.open_last_price[i] - tick_size
                         else:
-                            if open_price < Order.last_price[i] + tick:
-                                open_price = Order.last_price[i] + tick
+                            if open_price < Order.open_last_price[i] + tick:
+                                open_price = Order.open_last_price[i] + tick
                     
                     o.open_price = open_price
                 
