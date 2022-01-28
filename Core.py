@@ -91,7 +91,14 @@ class Core:
     def get_my_position(cls):
         
         # 오류 수정 필요
-        result = cls.session.my_position(symbol=cls.symbol)['result']
+        done = False
+        while not done:
+            try:
+                result = cls.session.my_position(symbol=cls.symbol)['result']
+            except Exception as e:
+                print("get_my_position error...", result, e)
+            else:
+                done = True
 
         cls.get_balance()
 
