@@ -1,6 +1,6 @@
 # 파일 무시
 myConfig.ini
-test.Py
+test.py
 
 # 폴더 무시
 PyBit/

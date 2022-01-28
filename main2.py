@@ -16,23 +16,20 @@ my_price = core.get_price()
 tot_val = core.get_total_qty() * margin
 order = [[], []]
 
-total_size = 1
 qty_size = 1
 # if tot_val > total_size:
 #     qty_size = tot_val // total_size
 
-
-for i in range(total_size):
-    o = Order(str(i) + 'B', True)
-    order[0].append(o)
-    o = Order(str(i) + 'S', False)
-    order[1].append(o)
+o = Order('0B', True)
+order[0].append(o)
+o = Order('0S', False)
+order[1].append(o)
 
 Order.core = core
 
 done = False
 #done = True
-basis_per = 5
+basis_per = 15
 full_per = 25
 tick_size = 100
 #pp.pprint(core.get_pnl_vratio())
@@ -45,9 +42,25 @@ while done:
         tick = 0
         ol = len(order[i])
         for j in range(ol): 
-            if order[i][j].step == 0:
+            o = order[i][j]
+            if o.step == 0:
+                o.qty = qty_size
+                o.step = 1
+                tick += (tick_size * (-1 if o.side else 1))
+                tick_price = price + tick
+
                 if vratio[i] < basis_per:
-                    pass
+                    o.open_price = tick_price
+                    if ol < 5:
+                        order[i].append(str(ol) + ('B' if o.side else 'S'), o.side)
+                elif vratio[i] < full_per:
+                    o.side = not o.side
+                    o.close = not o.close
+                    open_price = round(float(core.my_pos[i+1]['entry_price'])) + (tick * (-1 if not o.side else 1))
+                    o.open_price = open_price
+                    o.step = 3
+
+                        
             if o.step == 0:
                 o.qty = qty_size
                 o.step = 1
